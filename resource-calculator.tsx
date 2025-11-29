@@ -1,275 +1,527 @@
-import React, { useState } from 'react';
-import { Plus, Trash2, Calculator, Download } from 'lucide-react';
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>حاسبة أرباح FC 26 (النسخة النهائية - مُصلحة)</title>
+    <style>
+        /* 1. تنسيق الوضع الداكن (Dark Theme) */
+        :root {
+            --bg-color: #121212; 
+            --card-color: #1e1e1e; 
+            --text-color: #e0e0e0; 
+            --input-bg: #2e2e2e; 
+            --border-color: #444;
+            --profit-color: #66BB6A; /* أخضر */
+            --loss-color: #EF5350;   /* أحمر */
+            --update-color: #FFC107; /* أصفر */
+            --delete-color: #dc3545;
+            --edit-color: #17a2b8;
+            --total-color: #007bff; /* أزرق للإجمالي */
+            --buy-color: #ff9800; /* برتقالي للشراء */
+            --sell-color: #2196F3; /* أزرق للبيع */
+            --pdf-button-color: #dc3545; /* أحمر للتصدير */
+            --reset-button-color: #6c757d; /* رمادي لإعادة التعيين */
+        }
 
-export default function ResourceCalculator() {
-  const [resources, setResources] = useState([
-    { id: 1, name: 'خام الذهب', quantity: 0, pricePerUnit: 0, totalPrice: 0, divideBy: 1, dividedQuantity: 0, dividedPrice: 0 }
-  ]);
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 40px 20px;
+            margin: 0;
+            direction: rtl; 
+        }
 
-  const addResource = () => {
-    const newResource = {
-      id: Date.now(),
-      name: '',
-      quantity: 0,
-      pricePerUnit: 0,
-      totalPrice: 0,
-      divideBy: 1,
-      dividedQuantity: 0,
-      dividedPrice: 0
-    };
-    setResources([...resources, newResource]);
-  };
+        #main-container {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            width: 100%;
+            max-width: 900px;
+        }
 
-  const removeResource = (id) => {
-    setResources(resources.filter(resource => resource.id !== id));
-  };
+        .calculator {
+            background-color: var(--card-color);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+            width: 100%;
+        }
 
-  const updateResource = (id, field, value) => {
-    setResources(resources.map(resource => {
-      if (resource.id === id) {
-        const updatedResource = { ...resource, [field]: value };
-        
-        // Calculate total price when quantity or price changes
-        if (field === 'quantity' || field === 'pricePerUnit') {
-          updatedResource.totalPrice = updatedResource.quantity * updatedResource.pricePerUnit;
+        /* تنسيقات المدخلات والأزرار (مختصرة) */
+        input[type="number"], input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            box-sizing: border-box; 
+            text-align: right;
+            background-color: var(--input-bg);
+            color: var(--text-color);
+        }
+
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
+
+        #actionButton {
+            background-color: var(--profit-color);
+            color: var(--card-color);
+            width: 100%;
+            font-size: 1em;
+            margin-bottom: 5px;
+        }
+
+        #actionButton.updating {
+            background-color: var(--update-color);
+            color: #2c2c2c;
         }
         
-        // Calculate division results
-        if (field === 'quantity' || field === 'pricePerUnit' || field === 'divideBy') {
-          const divideBy = field === 'divideBy' ? value : updatedResource.divideBy;
-          if (divideBy > 0) {
-            updatedResource.dividedQuantity = updatedResource.quantity / divideBy;
-            updatedResource.dividedPrice = updatedResource.totalPrice / divideBy;
-          } else {
-            updatedResource.dividedQuantity = 0;
-            updatedResource.dividedPrice = 0;
-          }
+        #exportPdfButton {
+            background-color: var(--pdf-button-color);
+            color: white;
+            width: 100%;
+            font-size: 1em;
+            margin-top: 15px;
         }
         
-        return updatedResource;
-      }
-      return resource;
-    }));
-  };
+        #resetAllDealsButton {
+            background-color: var(--reset-button-color);
+            color: white;
+            width: 100%;
+            font-size: 0.9em;
+            margin-top: 20px;
+        }
 
-  const calculateTotal = () => {
-    return resources.reduce((total, resource) => total + resource.totalPrice, 0);
-  };
+        /* تنسيق قسم التجميع الشامل */
+        .summary-box {
+            background-color: #242424; 
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 8px;
+            border-top: 3px solid var(--total-color);
+        }
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px dotted #3a3a3a;
+        }
+        .summary-value {
+            font-weight: bold;
+        }
+        
+        .profit { color: var(--profit-color); }
+        .loss { color: var(--loss-color); }
 
-  const formatNumber = (num) => {
-    return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  };
+        /* تنسيق قائمة الصفقات */
+        .saved-deals-container {
+            background-color: var(--card-color);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+            width: 100%;
+        }
 
-  const formatPriceNumber = (num) => {
-    // Remove trailing zeros after decimal point
-    return num.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-  };
+        .deal-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: #242424;
+        }
+        
+        /* --------------------------------- */
+        /* 2. تنسيقات خاصة بالطباعة (لـ PDF) */
+        /* --------------------------------- */
+        @media print {
+            /* إخفاء العناصر غير المرغوب فيها في PDF */
+            .calculator, #noDealsMessage, .deal-actions, #exportPdfButton, #cancelEditButton, #actionButton, #resetAllDealsButton {
+                display: none !important;
+            }
 
-  const exportToCSV = () => {
-    const headers = [
-      'اسم المورد',
-      'الكمية',
-      'السعر لكل وحدة',
-      'السعر الإجمالي',
-      'القسمة على',
-      'الكمية لكل قسمة',
-      'السعر لكل قسمة'
-    ];
+            /* إظهار الخلفيات والألوان لـ PDF */
+            body, #main-container, .saved-deals-container {
+                background-color: white !important;
+                color: #333 !important; 
+                box-shadow: none !important;
+                padding: 0 !important;
+                margin: 0 auto !important;
+            }
+            .profit { color: green !important; }
+            .loss { color: red !important; }
+            .summary-value.buy { color: #ff8c00 !important; }
+            .summary-value.sell { color: #007bff !important; }
+            .deal-item, .summary-box {
+                background-color: #f9f9f9 !important;
+                border: 1px solid #ddd !important;
+                -webkit-print-color-adjust: exact; 
+                color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body>
 
-    const csvData = resources.map(resource => [
-      resource.name || 'غير محدد',
-      resource.quantity,
-      resource.pricePerUnit,
-      resource.totalPrice,
-      resource.divideBy,
-      resource.dividedQuantity.toFixed(2),
-      resource.dividedPrice.toFixed(2)
-    ]);
+<div id="main-container">
+    <div class="calculator">
+        <h2>💰 حاسبة أرباح بيع اللاعبين (FC 26)</h2>
 
-    // Add summary row
-    const summaryRow = [
-      'الملخص الإجمالي',
-      calculateTotalQuantity(),
-      '',
-      calculateTotal(),
-      '',
-      '',
-      ''
-    ];
-
-    const csvContent = [
-      headers.join(','),
-      ...csvData.map(row => row.join(',')),
-      summaryRow.join(',')
-    ].join('\n');
-
-    // Create and download file
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `موارد_${new Date().toLocaleDateString('ar-SA')}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const calculateTotalQuantity = () => {
-    return resources.reduce((total, resource) => total + Number(resource.quantity), 0);
-  };
-
-  return (
-    <div className="min-h-screen bg-gray-800 p-6" dir="rtl">
-      <div className="max-w-6xl mx-auto">
-        <div className="bg-gray-700 rounded-lg shadow-lg p-8">
-          <div className="flex items-center justify-center mb-8">
-            <Calculator className="w-8 h-8 text-gray-400 ml-3" />
-            <h1 className="text-3xl font-bold text-gray-100">حاسبة الموارد</h1>
-          </div>
-
-          <div className="space-y-6">
-            {resources.map((resource, index) => (
-              <div key={resource.id} className="bg-gray-600 rounded-lg p-6 border border-gray-500">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-100">مورد رقم {index + 1}</h3>
-                  {resources.length > 1 && (
-                    <button
-                      onClick={() => removeResource(resource.id)}
-                      className="text-red-400 hover:text-red-300 transition-colors p-2"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      اسم المورد
-                    </label>
-                    <input
-                      type="text"
-                      value={resource.name}
-                      onChange={(e) => updateResource(resource.id, 'name', e.target.value)}
-                      placeholder="أدخل اسم المورد"
-                      className="w-full px-4 py-3 bg-gray-500 border border-gray-400 rounded-lg text-gray-100 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      الكمية
-                    </label>
-                    <input
-                      type="number"
-                      value={resource.quantity}
-                      onChange={(e) => updateResource(resource.id, 'quantity', Number(e.target.value) || 0)}
-                      placeholder="0"
-                      className="w-full px-4 py-3 bg-gray-500 border border-gray-400 rounded-lg text-gray-100 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      السعر لكل وحدة (كوين)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={resource.pricePerUnit}
-                      onChange={(e) => updateResource(resource.id, 'pricePerUnit', Number(e.target.value) || 0)}
-                      placeholder="0.00"
-                      className="w-full px-4 py-3 bg-gray-500 border border-gray-400 rounded-lg text-gray-100 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      القسمة على
-                    </label>
-                    <input
-                      type="number"
-                      value={resource.divideBy}
-                      onChange={(e) => updateResource(resource.id, 'divideBy', Number(e.target.value) || 1)}
-                      placeholder="1"
-                      min="1"
-                      className="w-full px-4 py-3 bg-gray-500 border border-gray-400 rounded-lg text-gray-100 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      السعر الإجمالي
-                    </label>
-                    <div className="w-full px-4 py-3 bg-gray-500 border border-gray-400 rounded-lg text-gray-100 font-semibold">
-                      {formatPriceNumber(resource.totalPrice)} كوين
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-4 p-4 bg-gray-650 rounded-lg">
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
-                    <div className="text-gray-300">
-                      <span className="font-medium">المورد:</span> {resource.name || 'غير محدد'}
-                    </div>
-                    <div className="text-gray-300">
-                      <span className="font-medium">إجمالي العناصر:</span> {resource.quantity}
-                      {resource.divideBy > 1 && (
-                        <div className="text-gray-400 text-xs mt-1">
-                          <span className="font-medium">الكمية لكل قسمة:</span> {formatNumber(resource.dividedQuantity)}
-                        </div>
-                      )}
-                    </div>
-                    <div className="text-gray-300">
-                      <span className="font-medium">التكلفة الفردية:</span> {formatPriceNumber(resource.pricePerUnit)} كوين
-                    </div>
-                    <div className="text-gray-300">
-                      <span className="font-medium">عدد الأقسام:</span> {resource.divideBy}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            <div className="flex gap-4">
-              <button
-                onClick={addResource}
-                className="flex-1 py-4 bg-gray-600 hover:bg-gray-500 text-gray-100 font-semibold rounded-lg transition-all duration-300 flex items-center justify-center space-x-2 border border-gray-500"
-              >
-                <Plus className="w-5 h-5" />
-                <span>إضافة مورد جديد</span>
-              </button>
-
-              <button
-                onClick={exportToCSV}
-                className="py-4 px-6 bg-green-600 hover:bg-green-500 text-white font-semibold rounded-lg transition-all duration-300 flex items-center justify-center space-x-2 border border-green-500"
-              >
-                <Download className="w-5 h-5" />
-                <span>تصدير CSV</span>
-              </button>
-            </div>
-
-            <div className="bg-gray-600 rounded-lg p-6 border border-gray-500">
-              <h2 className="text-2xl font-bold text-gray-100 mb-4 text-center">الملخص</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-gray-100">{resources.length}</div>
-                  <div className="text-gray-300">إجمالي الموارد</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-gray-100">{calculateTotalQuantity()}</div>
-                  <div className="text-gray-300">إجمالي العناصر</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-gray-100">{formatPriceNumber(calculateTotal())}</div>
-                  <div className="text-gray-300">التكلفة الإجمالية (كوين)</div>
-                </div>
-              </div>
-            </div>
-          </div>
+        <div>
+            <label for="dealName">اسم الصفقة (اختياري):</label>
+            <input type="text" id="dealName" placeholder="مثال: مبادلة صلاح">
         </div>
-      </div>
+
+        <div>
+            <label for="sellPrice">سعر البيع للاعب الواحد (كوينز):</label>
+            <input type="number" id="sellPrice" oninput="calculateProfit()" placeholder="أدخل سعر البيع..." min="0" step="100">
+        </div>
+
+        <div>
+            <label for="buyPrice">سعر الشراء للاعب الواحد (كوينز):</label>
+            <input type="number" id="buyPrice" oninput="calculateProfit()" placeholder="أدخل سعر الشراء..." min="0" step="100">
+        </div>
+        
+        <div>
+            <label for="quantity">عدد اللاعبين المباعين:</label>
+            <input type="number" id="quantity" oninput="calculateProfit()" placeholder="أدخل العدد..." min="1" step="1">
+        </div>
+
+        <div class="result" id="results">
+            <p><strong>الإيراد الإجمالي بعد الضريبة:</strong> <span id="netRevenue">0</span> كوينز</p>
+            <p><strong>الربح / الخسارة الصافية الإجمالية:</strong> <span id="netProfit" class="profit">0</span> كوينز</p>
+        </div>
+        
+        <button id="actionButton" class="saving" onclick="handleAction()">حفظ الصفقة</button>
+        <button id="cancelEditButton" onclick="cancelEdit()">إلغاء التعديل والعودة للحفظ</button>
     </div>
-  );
-}
+
+    <div class="saved-deals-container">
+        <h2>📂 الصفقات المحفوظة</h2>
+        <ul id="savedDealsList">
+            </ul>
+        <p id="noDealsMessage" style="text-align: center; color: #888;">لا توجد صفقات محفوظة بعد.</p>
+
+        <div id="summaryBox" class="summary-box" style="display: none;">
+            <h3>📊 ملخص الصفقات الإجمالي</h3>
+            <div class="summary-item">
+                <span>إجمالي سعر الشراء (التكلفة):</span>
+                <span id="totalBuy" class="summary-value buy">0 كوينز</span>
+            </div>
+             <div class="summary-item">
+                <span>إجمالي سعر البيع (الإجمالي الخام):</span>
+                <span id="totalSell" class="summary-value sell">0 كوينز</span>
+            </div>
+            <div class="summary-item">
+                <span>إجمالي الإيراد بعد الضريبة (5%):</span>
+                <span id="totalNetRevenue" class="summary-value sell">0 كوينز</span>
+            </div>
+            <div class="summary-item">
+                <span>صافي الربح / الخسارة الإجمالي:</span>
+                <span id="totalProfitValue" class="summary-value profit">0 كوينز</span>
+            </div>
+        </div>
+        
+        <button id="exportPdfButton" onclick="exportToPdf()">📥 تصدير كملف PDF ملون</button>
+        <button id="resetAllDealsButton" onclick="resetAllDeals()">⚠️ إعادة تعيين وحذف جميع الصفقات</button>
+    </div>
+</div>
+
+<script>
+    const STORAGE_KEY = 'fc26_saved_deals';
+    const TAX_RATE = 0.05;
+    let editingDealId = null;
+
+    // ------------------------------------
+    // دالة جديدة: إعادة تعيين جميع الصفقات
+    // ------------------------------------
+    window.resetAllDeals = function() {
+        if (confirm('⚠️ هل أنت متأكد من حذف جميع الصفقات المحفوظة؟ لن تتمكن من استعادتها.')) {
+            localStorage.removeItem(STORAGE_KEY);
+            editingDealId = null;
+            clearInputFields();
+            renderDealsList();
+            alert('تم حذف جميع الصفقات بنجاح. يمكنك الآن البدء بحفظ صفقات جديدة.');
+        }
+    }
+    
+    // ------------------------------------
+    // باقي الدوال (كما هي)
+    // ------------------------------------
+    window.exportToPdf = function() {
+        window.print();
+    }
+
+    function formatNumber(num) {
+        if (isNaN(num) || num === null) return '0';
+        return Math.round(num).toLocaleString('en-US');
+    }
+
+    function calculateProfit() {
+        const sellPrice = parseFloat(document.getElementById('sellPrice').value) || 0;
+        const buyPrice = parseFloat(document.getElementById('buyPrice').value) || 0;
+        const quantity = parseInt(document.getElementById('quantity').value) || 1; 
+
+        const totalSellPrice = sellPrice * quantity;
+        const totalBuyPrice = buyPrice * quantity;
+        const totalTax = totalSellPrice * TAX_RATE;
+        const totalNetRevenue = totalSellPrice - totalTax;
+        const totalNetProfit = totalNetRevenue - totalBuyPrice;
+
+        document.getElementById('netRevenue').textContent = formatNumber(totalNetRevenue);
+        
+        const netProfitElement = document.getElementById('netProfit');
+        netProfitElement.textContent = formatNumber(totalNetProfit);
+
+        if (totalNetProfit > 0) {
+            netProfitElement.className = 'deal-profit profit';
+        } else if (totalNetProfit < 0) {
+            netProfitElement.className = 'deal-profit loss';
+        } else {
+            netProfitElement.className = 'deal-profit'; 
+        }
+
+        return { totalNetProfit, sellPrice, buyPrice, quantity, totalSellPrice, totalBuyPrice, totalNetRevenue };
+    }
+
+    function getDealsFromStorage() {
+        const storedDeals = localStorage.getItem(STORAGE_KEY);
+        try {
+            return storedDeals ? JSON.parse(storedDeals) : [];
+        } catch (e) {
+            console.error("Local Storage data corrupted, clearing saved deals.", e);
+            // إذا كانت البيانات تالفة، قم بحذفها تلقائيًا
+            localStorage.removeItem(STORAGE_KEY); 
+            return [];
+        }
+    }
+    
+    function handleAction() {
+        if (editingDealId) {
+            updateDeal(editingDealId);
+        } else {
+            saveDeal();
+        }
+    }
+    
+    function saveDeal() {
+        const { totalNetProfit, sellPrice, buyPrice, quantity, totalSellPrice, totalBuyPrice, totalNetRevenue } = calculateProfit();
+        let dealName = document.getElementById('dealName').value.trim() || `صفقة غير مُسماة (${new Date().toLocaleTimeString('ar-EG')})`;
+        
+        if (sellPrice <= 0) {
+            alert("الرجاء إدخال سعر بيع صحيح أكبر من صفر قبل الحفظ.");
+            return;
+        }
+        
+        const newDeal = {
+            id: Date.now(),
+            name: dealName,
+            sell: sellPrice,
+            buy: buyPrice,
+            qty: quantity,
+            profit: totalNetProfit,
+            totalSell: totalSellPrice, 
+            totalBuy: totalBuyPrice,   
+            totalNetRevenue: totalNetRevenue 
+        };
+
+        const deals = getDealsFromStorage();
+        deals.push(newDeal);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(deals));
+        
+        clearInputFields();
+        renderDealsList();
+    }
+    
+    window.updateDeal = function(idToUpdate) {
+        const { totalNetProfit, sellPrice, buyPrice, quantity, totalSellPrice, totalBuyPrice, totalNetRevenue } = calculateProfit();
+        let dealName = document.getElementById('dealName').value.trim() || `صفقة مُعدلة (${new Date().toLocaleTimeString('ar-EG')})`;
+
+        if (sellPrice <= 0) {
+            alert("الرجاء إدخال سعر بيع صحيح أكبر من صفر قبل التحديث.");
+            return;
+        }
+
+        let deals = getDealsFromStorage();
+        const index = deals.findIndex(deal => deal.id === idToUpdate);
+
+        if (index !== -1) {
+            deals[index] = {
+                id: idToUpdate,
+                name: dealName,
+                sell: sellPrice,
+                buy: buyPrice,
+                qty: quantity,
+                profit: totalNetProfit,
+                totalSell: totalSellPrice,
+                totalBuy: totalBuyPrice,
+                totalNetRevenue: totalNetRevenue
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(deals));
+            
+            cancelEdit(); 
+            renderDealsList();
+        } else {
+            alert("لم يتم العثور على الصفقة للتحديث.");
+        }
+    }
+
+    window.editDeal = function(dealId) {
+        const deals = getDealsFromStorage();
+        const dealToEdit = deals.find(deal => deal.id === dealId);
+
+        if (dealToEdit) {
+            document.getElementById('dealName').value = dealToEdit.name;
+            document.getElementById('sellPrice').value = dealToEdit.sell;
+            document.getElementById('buyPrice').value = dealToEdit.buy;
+            document.getElementById('quantity').value = dealToEdit.qty;
+
+            calculateProfit();
+
+            editingDealId = dealId;
+            const actionButton = document.getElementById('actionButton');
+            actionButton.textContent = 'تحديث الصفقة المحفوظة';
+            actionButton.classList.remove('saving');
+            actionButton.classList.add('updating');
+            
+            document.getElementById('cancelEditButton').style.display = 'block';
+        }
+    }
+
+    window.cancelEdit = function() {
+        editingDealId = null;
+        const actionButton = document.getElementById('actionButton');
+        actionButton.textContent = 'حفظ الصفقة';
+        actionButton.classList.remove('updating');
+        actionButton.classList.add('saving');
+        
+        document.getElementById('cancelEditButton').style.display = 'none';
+        clearInputFields();
+    }
+    
+    function clearInputFields() {
+        document.getElementById('dealName').value = '';
+        document.getElementById('sellPrice').value = '';
+        document.getElementById('buyPrice').value = '';
+        document.getElementById('quantity').value = '1';
+        calculateProfit();
+    }
+
+    function renderDealsList() {
+        const deals = getDealsFromStorage();
+        const list = document.getElementById('savedDealsList');
+        const message = document.getElementById('noDealsMessage');
+        const summaryBox = document.getElementById('summaryBox');
+
+        list.innerHTML = '';
+        
+        let totalProfit = 0;
+        let grandTotalBuy = 0;
+        let grandTotalSell = 0;
+        let grandTotalNetRevenue = 0;
+
+        if (deals.length === 0) {
+            message.style.display = 'block';
+            summaryBox.style.display = 'none';
+        } else {
+            message.style.display = 'none';
+            summaryBox.style.display = 'block';
+        }
+
+        deals.forEach(deal => {
+            // معالجة الصفقات القديمة/المتضررة
+            if (deal.totalSell === undefined || deal.totalBuy === undefined || deal.profit === undefined) {
+                const sellPrice = parseFloat(deal.sell) || 0;
+                const buyPrice = parseFloat(deal.buy) || 0;
+                const quantity = parseInt(deal.qty) || 1;
+                
+                deal.totalSell = sellPrice * quantity;
+                deal.totalBuy = buyPrice * quantity;
+                deal.totalNetRevenue = deal.totalSell * (1 - TAX_RATE);
+                deal.profit = deal.totalNetRevenue - deal.totalBuy;
+            }
+            
+            const profitValue = deal.profit;
+            
+            // تجميع الإجماليات
+            totalProfit += profitValue; 
+            grandTotalBuy += deal.totalBuy; 
+            grandTotalSell += deal.totalSell;
+            grandTotalNetRevenue += deal.totalNetRevenue;
+
+            const listItem = document.createElement('li');
+            listItem.className = 'deal-item';
+            
+            const profitClass = profitValue > 0 ? 'profit' : (profitValue < 0 ? 'loss' : '');
+            const profitSign = Math.sign(profitValue) >= 0 ? '+' : ''; 
+
+            listItem.innerHTML = `
+                <div class="deal-info">
+                    <strong>${deal.name}</strong>
+                    <p>
+                        بيع: ${formatNumber(deal.sell)} | شراء: ${formatNumber(deal.buy)} | عدد: ${formatNumber(deal.qty)}
+                    </p>
+                </div>
+                <span class="deal-profit ${profitClass}">
+                    ${profitSign}${formatNumber(profitValue)} كوينز
+                </span>
+                <div class="deal-actions">
+                    <button class="edit-btn" onclick="editDeal(${deal.id})">تعديل</button>
+                    <button class="delete-btn" onclick="deleteDeal(${deal.id})">حذف</button>
+                </div>
+            `;
+            list.appendChild(listItem);
+        });
+
+        // عرض الإجماليات النهائية
+        document.getElementById('totalBuy').textContent = `${formatNumber(grandTotalBuy)} كوينز`;
+        document.getElementById('totalSell').textContent = `${formatNumber(grandTotalSell)} كوينز`;
+        document.getElementById('totalNetRevenue').textContent = `${formatNumber(grandTotalNetRevenue)} كوينز`;
+
+        const totalProfitValueElement = document.getElementById('totalProfitValue');
+        const totalClass = totalProfit > 0 ? 'profit' : (totalProfit < 0 ? 'loss' : '');
+        const totalSign = Math.sign(totalProfit) >= 0 ? '+' : ''; 
+        
+        totalProfitValueElement.textContent = `${totalSign}${formatNumber(totalProfit)} كوينز`;
+        totalProfitValueElement.className = `summary-value ${totalClass}`;
+    }
+
+    window.deleteDeal = function(dealId) {
+        if (!confirm('هل أنت متأكد من حذف هذه الصفقة؟')) {
+            return;
+        }
+        
+        let deals = getDealsFromStorage();
+        deals = deals.filter(deal => deal.id !== dealId);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(deals));
+        renderDealsList();
+        
+        if (editingDealId === dealId) {
+            cancelEdit();
+        }
+    }
+
+    window.onload = () => {
+        calculateProfit();
+        renderDealsList();
+    };
+</script>
+
+</body>
+</html>
